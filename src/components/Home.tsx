@@ -14,6 +14,7 @@ interface HomeProps {
 
 const Home: React.FC<HomeProps> = ({ onNavigate, onProjectSelect }) => {
   const [searchFocused, setSearchFocused] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
   const [statsAnimated, setStatsAnimated] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -89,10 +90,12 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onProjectSelect }) => {
 
               <input
                 type="text"
+                value={searchValue}
                 placeholder="搜索区域、板块或楼盘名称..."
                 className="flex-1 bg-transparent text-white px-2 sm:px-3 md:px-4 py-2.5 sm:py-3 md:py-4 outline-none placeholder-gray-500 focus:outline-none focus:ring-0 focus:border-white/10 text-sm sm:text-base"
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setSearchFocused(false)}
+                onChange={(e) => setSearchValue(e.target.value)}
               />
 
               <button
@@ -111,8 +114,9 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onProjectSelect }) => {
                   {hotSearches.map((search, index) => (
                     <button
                       key={index}
-                      onClick={() => {
-                        // 这里可以添加搜索逻辑
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setSearchValue(search);
                         setSearchFocused(false);
                       }}
                       className="px-2.5 py-1 text-xs sm:text-sm bg-white/10 hover:bg-accent/20 text-gray-300 hover:text-white rounded-full transition-all"
@@ -135,7 +139,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate, onProjectSelect }) => {
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
             </button>
             <button
-              onClick={() => onNavigate('trends')}
+              onClick={() => onNavigate('featured')}
               className="flex items-center justify-center gap-2 px-5 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 bg-transparent border border-white/20 text-white font-semibold rounded-full hover:bg-white/5 transition-all duration-300 hover:shadow-lg hover:shadow-white/5 transform hover:-translate-y-1 w-full sm:w-auto text-sm sm:text-base min-w-touch min-h-touch"
             >
               <HomeIcon className="w-4 h-4" />

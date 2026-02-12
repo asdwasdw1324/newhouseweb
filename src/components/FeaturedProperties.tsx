@@ -4,12 +4,12 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Star, MapPin, Building2, ArrowRight, Filter, Search, Heart, GitCompare, RefreshCw } from 'lucide-react';
+import { Star, MapPin, Building2, ArrowRight, Filter, Search, Heart, GitCompare } from 'lucide-react';
 import { NewHomeProject } from '../data/newHomes';
 import { shanghaiDistricts } from '../data/districts';
 import useScrollAnimation from '../hooks/useScrollAnimation';
 import AnimatedCard from './AnimatedCard';
-import { fetchProjects, triggerSync } from '../services/api';
+import { fetchProjects } from '../services/api';
 
 interface FeaturedPropertiesProps {
   onProjectSelect: (project: NewHomeProject) => void;
@@ -35,7 +35,6 @@ const FeaturedProperties: React.FC<FeaturedPropertiesProps> = ({
   const [itemsPerPage, setItemsPerPage] = useState(8);
   const [projects, setProjects] = useState<NewHomeProject[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
 
   // 从API获取楼盘数据
   useEffect(() => {
@@ -78,43 +77,6 @@ const FeaturedProperties: React.FC<FeaturedPropertiesProps> = ({
     loadProjects();
   }, []);
 
-  // 手动同步数据
-  const handleSyncData = async () => {
-    setIsSyncing(true);
-    try {
-      const response = await triggerSync();
-      if (response.success) {
-        // 重新加载数据
-        const loadResponse = await fetchProjects();
-        if (loadResponse.success && loadResponse.data) {
-          const formattedProjects = loadResponse.data.map((project: any) => ({
-            id: project.id,
-            name: project.name,
-            districtId: project.districtId,
-            subDistrictId: project.subDistrictId || project.subDistrict || '',
-            price: project.price,
-            priceUnit: project.priceUnit || '元/㎡',
-            area: project.area || 0,
-            areaRange: project.areaRange || '',
-            status: project.status || '在售',
-            features: project.features || project.tags || [],
-            description: project.description || '',
-            image: project.image || '',
-            developer: project.developer || '',
-            address: project.address || '',
-            coordinates: project.coordinates || { lat: 0, lng: 0 }
-          }));
-          setProjects(formattedProjects);
-          setCurrentPage(1); // 重置到第一页
-        }
-      }
-    } catch (error) {
-      console.error('同步数据失败:', error);
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
   // 筛选和搜索功能
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -150,45 +112,29 @@ const FeaturedProperties: React.FC<FeaturedPropertiesProps> = ({
       {/* 页面内容 */}
       <div className="relative z-10 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-20">
         {/* 标题区域 */}
-        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-light text-white mb-2">
-              精选<span className="text-orange-500">楼盘</span>
-            </h1>
-            <p className="text-gray-400">发现上海最值得关注的优质楼盘</p>
-          </div>
-          <button
-            onClick={handleSyncData}
-            disabled={isSyncing}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 text-sm transition-all ${
-              isSyncing
-                ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
-                : 'bg-orange-500 text-white hover:bg-orange-600'
-            }`}
-          >
-            <RefreshCw className={`w-4 h-4 ${
-              isSyncing ? 'animate-spin' : ''
-            }`} />
-            {isSyncing ? '同步中...' : '同步数据'}
-          </button>
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-light text-white mb-2">
+            精选<span className="text-orange-500">楼盘</span>
+          </h1>
+          <p className="text-gray-400">发现上海最值得关注的优质楼盘</p>
         </div>
 
         {/* 搜索和筛选区域 */}
-        <div className="grid grid-cols-1 gap-4 sm:gap-6 mb-6 sm:mb-8">
+        <div className="flex flex-wrap items-start gap-2 sm:gap-3 mb-6 sm:mb-8">
           {/* 搜索框 */}
-          <div className="relative">
+          <div className="relative flex-shrink-0 h-[36px]">
             <input
               type="text"
-              placeholder="搜索楼盘名称..."
+              placeholder="搜索楼盘..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-5 py-3 bg-white/5 backdrop-blur-lg rounded-xl border border-white/10 focus:outline-none focus:border-orange-500 text-white placeholder-gray-400"
+              className="w-[100px] sm:w-[110px] focus:w-[180px] sm:focus:w-[220px] px-4 py-2 bg-white/5 backdrop-blur-lg rounded-lg border border-white/10 focus:outline-none focus:border-orange-500 text-white placeholder-gray-400 text-sm transition-all duration-300 ease-out h-full"
             />
-            <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
           </div>
 
           {/* 筛选按钮 */}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 flex-1 items-start">
             <button
               onClick={() => handleFilterChange('all')}
               className={`px-4 py-2 rounded-lg transition-all text-sm ${
