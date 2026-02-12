@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>房地产Web图标库 - Playground</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    :root {
+      --bg-gray-900: #111827;
+      --bg-gray-800: #1f2937;
+      --bg-gray-700: #374151;
+      --text-white: #f9fafb;
+      --text-gray-400: #9ca3af;
+      --text-gray-500: #6b7280;
+      --orange-500: #f97316;
+      --orange-600: #ea580c;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-gray-900);
+      color: var(--text-white);
+      line-height: 1.6;
+    }
+    
+    .min-h-screen {
+      min-height: 100vh;
+    }
+    
+    .p-4 {
+      padding: 1rem;
+    }
+    
+    .sm\:p-8 {
+      padding: 2rem;
+    }
+    
+    .max-w-7xl {
+      max-width: 80rem;
+    }
+    
+    .mx-auto {
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .text-center {
+      text-align: center;
+    }
+    
+    .mb-12 {
+      margin-bottom: 3rem;
+    }
+    
+    .text-3xl {
+      font-size: 1.875rem;
+    }
+    
+    .sm\:text-4xl {
+      font-size: 2.25rem;
+    }
+    
+    .font-bold {
+      font-weight: 700;
+    }
+    
+    .mb-4 {
+      margin-bottom: 1rem;
+    }
+    
+    .text-gray-400 {
+      color: var(--text-gray-400);
+    }
+    
+    .max-w-2xl {
+      max-width: 42rem;
+    }
+    
+    .grid {
+      display: grid;
+    }
+    
+    .grid-cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    
+    .sm\:grid-cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    
+    .lg\:grid-cols-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    
+    .gap-6 {
+      gap: 1.5rem;
+    }
+    
+    .bg-gray-800 {
+      background-color: var(--bg-gray-800);
+    }
+    
+    .rounded-xl {
+      border-radius: 0.75rem;
+    }
+    
+    .p-6 {
+      padding: 1.5rem;
+    }
+    
+    .hover\:shadow-lg:hover {
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    .hover\:shadow-orange-500\/10:hover {
+      box-shadow: 0 10px 15px -3px rgba(249, 115, 22, 0.1), 0 4px 6px -2px rgba(249, 115, 22, 0.05);
+    }
+    
+    .transition-all {
+      transition-property: all;
+      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+      transition-duration: 150ms;
+    }
+    
+    .flex {
+      display: flex;
+    }
+    
+    .flex-col {
+      flex-direction: column;
+    }
+    
+    .items-center {
+      align-items: center;
+    }
+    
+    .bg-gray-700 {
+      background-color: var(--bg-gray-700);
+    }
+    
+    .rounded-lg {
+      border-radius: 0.5rem;
+    }
+    
+    .mb-2 {
+      margin-bottom: 0.5rem;
+    }
+    
+    .text-lg {
+      font-size: 1.125rem;
+    }
+    
+    .font-semibold {
+      font-weight: 600;
+    }
+    
+    .text-center {
+      text-align: center;
+    }
+    
+    .text-sm {
+      font-size: 0.875rem;
+    }
+    
+    .mt-16 {
+      margin-top: 4rem;
+    }
+    
+    .p-8 {
+      padding: 2rem;
+    }
+    
+    .text-2xl {
+      font-size: 1.5rem;
+    }
+    
+    .mb-6 {
+      margin-bottom: 1.5rem;
+    }
+    
+    .space-y-4 > * + * {
+      margin-top: 1rem;
+    }
+    
+    .bg-gray-900 {
+      background-color: var(--bg-gray-900);
+    }
+    
+    .overflow-x-auto {
+      overflow-x: auto;
+    }
+    
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    
+    .text-gray-300 {
+      color: #d1d5db;
+    }
+    
+    .list-disc {
+      list-style-type: disc;
+    }
+    
+    .list-inside {
+      list-style-position: inside;
+    }
+    
+    .space-y-2 > * + * {
+      margin-top: 0.5rem;
+    }
+    
+    .bg-gray-900 {
+      background-color: var(--bg-gray-900);
+    }
+    
+    .px-1 {
+      padding-left: 0.25rem;
+      padding-right: 0.25rem;
+    }
+    
+    .rounded {
+      border-radius: 0.25rem;
+    }
+    
+    .mt-12 {
+      margin-top: 3rem;
+    }
+    
+    .text-gray-500 {
+      color: var(--text-gray-500);
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    // 图标组件定义
+    const HouseIcon = ({ size = 24, color = '#f97316', className = '' }) => {
+      return (
+        <svg
+          width={size}
+          height={size}
+          viewBox="0 0 40 40"
+          className={className}
+        >
+          <defs>
+            <linearGradient id="houseGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#f97316" />
+              <stop offset="100%" stopColor="#ea580c" />
+            </linearGradient>
+            <linearGradient id="roofGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#ea580c" />
+              <stop offset="100%" stopColor="#c2410c" />
+            </linearGradient>
+            <filter id="houseShadow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="rgba(0,0,0,0.2)" />
+            </filter>
+          </defs>
+          {/* 房子主体 */}
+          <path
+            d="M12 18 L20 10 L28 18 L28 32 L12 32 Z"
+            fill="url(#houseGradient)"
+            filter="url(#houseShadow)"
+          />
+          {/* 房子边框 */}
+          <path
+            d="M12 18 L20 10 L28 18 L28 32 L12 32 Z"
+            fill="none"
+            stroke="#ea580c"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
+          {/* 屋顶 */}
+          <path
+            d="M10 18 L20 8 L30 18"
+            fill="url(#roofGradient)"
+            filter="url(#houseShadow)"
+          />
+          {/* 屋顶边框 */}
+          <path
+            d="M10 18 L20 8 L30 18"
+            fill="none"
+            stroke="#c2410c"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
+          {/* 门 */}
+          <rect x="18" y="24" width="4" height="8" rx="1" fill="white" opacity="0.9" />
+          <path
+            d="M20 28 L20 32"
+            stroke="#ea580c"
+            strokeWidth="0.5"
+            strokeLinecap="round"
+          />
+          {/* 窗户 */}
+          <rect x="14" y="19" width="3" height="3" rx="0.5" fill="white" opacity="0.8" />
+          <path
+            d="M15.5 19 L15.5 22"
+            stroke="#ea580c"
+            strokeWidth="0.5"
+            strokeLinecap="round"
+          />
+          <path
+            d="M14 20.5 L17 20.5"
+            stroke="#ea580c"
+            strokeWidth="0.5"
+            strokeLinecap="round"
+          />
+          <rect x="23" y="19" width="3" height="3" rx="0.5" fill="white" opacity="0.8" />
+          <path
+            d="M24.5 19 L24.5 22"
+            stroke="#ea580c"
+            strokeWidth="0.5"
+            strokeLinecap="round"
+          />
+          <path
+            d="M23 20.5 L26 20.5"
+            stroke="#ea580c"
+            strokeWidth="0.5"
+            strokeLinecap="round"
+          />
+          {/* 房脊 */}
+          <path
+            d="M20 8 L20 18"
+            stroke="#c2410c"
+            strokeWidth="1"
+            strokeLinecap="round"
+          />
+          {/* 地面阴影 */}
+          <path
+            d="M12 32 L28 32"
+            stroke="#c2410c"
+            strokeWidth="1"
+            strokeLinecap="round"
+            opacity="0.6"
+          />
+          <ellipse cx="20" cy="33" rx="8" ry="1" fill="rgba(0,0,0,0.1)" />
+        </svg>
+      );
+    };
+
+    const MapIcon = ({ size = 24, color = '#f97316', className = '' }) => {
+      return (
+        <svg
+          width={size}
+          height={size}
+          viewBox="0 0 24 24"
+          className={className}
+        >
+          <circle cx="12" cy="10" r="3" fill={color} opacity="0.8" />
+          <path
+            d="M12 10 L12 20 L8 16 L16 16 L12 20 Z"
+            fill={color}
+          />
+          <path
+            d="M12 10 L12 20 L8 16 L16 16 L12 20 Z"
+            fill="none"
+            stroke={color}
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+          <circle cx="12" cy="10" r="3"
+            fill="none"
+            stroke={color}
+            strokeWidth="2"
+          />
+        </svg>
+      );
+    };
+
+    const PriceIcon = ({ size = 24, color = '#f97316', className = '' }) => {
+      return (
+        <svg
+          width={size}
+          height={size}
+          viewBox="0 0 24 24"
+          className={className}
+        >
+          <circle cx="12" cy="12" r="8" fill={color} opacity="0.1" />
+          <path
+            d="M12 8 L12 16 L10 14 L14 14 L12 16"
+            fill={color}
+          />
+          <path
+            d="M12 8 L12 16 L10 14 L14 14 L12 16"
+            fill="none"
+            stroke={color}
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+          <text x="12" y="14" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">
+            ¥
+          </text>
+        </svg>
+      );
+    };
+
+    const AreaIcon = ({ size = 24, color = '#f97316', className = '' }) => {
+      return (
+        <svg
+          width={size}
+          height={size}
+          viewBox="0 0 24 24"
+          className={className}
+        >
+          <rect x="4" y="4" width="16" height="16" rx="2" fill={color} opacity="0.1" />
+          <rect x="4" y="4" width="16" height="16" rx="2"
+            fill="none"
+            stroke={color}
+            strokeWidth="2"
+          />
+          <path
+            d="M4 12 L20 12"
+            stroke={color}
+            strokeWidth="2"
+            strokeDasharray="2,2"
+          />
+          <path
+            d="M12 4 L12 20"
+            stroke={color}
+            strokeWidth="2"
+            strokeDasharray="2,2"
+          />
+          <text x="12" y="14" textAnchor="middle" fill={color} fontSize="6" fontWeight="bold">
+            m²
+          </text>
+        </svg>
+      );
+    };
+
+    const SearchIcon = ({ size = 24, color = '#f97316', className = '' }) => {
+      return (
+        <svg
+          width={size}
+          height={size}
+          viewBox="0 0 24 24"
+          className={className}
+        >
+          <circle cx="11" cy="11" r="8" fill="none" stroke={color} strokeWidth="2" />
+          <path
+            d="M21 21 L16.65 16.65"
+            stroke={color}
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </svg>
+      );
+    };
+
+    const FavoriteIcon = ({ size = 24, color = '#f97316', className = '' }) => {
+      return (
+        <svg
+          width={size}
+          height={size}
+          viewBox="0 0 24 24"
+          className={className}
+        >
+          <path
+            d="M12 21.35 L10.55 20.03 C5.4 15.36 2 12.28 2 8.5 C2 5.42 4.42 3 7.5 3 C9.24 3 10.91 3.81 12 5.09 C13.09 3.81 14.76 3 16.5 3 C19.58 3 22 5.42 22 8.5 C22 12.28 18.6 15.36 13.45 20.03 L12 21.35 Z"
+            fill={color}
+            opacity="0.8"
+          />
+          <path
+            d="M12 21.35 L10.55 20.03 C5.4 15.36 2 12.28 2 8.5 C2 5.42 4.42 3 7.5 3 C9.24 3 10.91 3.81 12 5.09 C13.09 3.81 14.76 3 16.5 3 C19.58 3 22 5.42 22 8.5 C22 12.28 18.6 15.36 13.45 20.03 L12 21.35 Z"
+            fill="none"
+            stroke={color}
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+        </svg>
+      );
+    };
+
+    const CompareIcon = ({ size = 24, color = '#f97316', className = '' }) => {
+      return (
+        <svg
+          width={size}
+          height={size}
+          viewBox="0 0 24 24"
+          className={className}
+        >
+          <rect x="4" y="6" width="6" height="12" rx="2" fill={color} opacity="0.2" />
+          <rect x="4" y="6" width="6" height="12" rx="2"
+            fill="none"
+            stroke={color}
+            strokeWidth="2"
+          />
+          <rect x="14" y="6" width="6" height="12" rx="2" fill={color} opacity="0.2" />
+          <rect x="14" y="6" width="6" height="12" rx="2"
+            fill="none"
+            stroke={color}
+            strokeWidth="2"
+          />
+          <path
+            d="M10 12 L14 12"
+            stroke={color}
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          <path
+            d="M12 10 L12 14"
+            stroke={color}
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </svg>
+      );
+    };
+
+    const ShareIcon = ({ size = 24, color = '#f97316', className = '' }) => {
+      return (
+        <svg
+          width={size}
+          height={size}
+          viewBox="0 0 24 24"
+          className={className}
+        >
+          <circle cx="18" cy="5" r="3" fill={color} />
+          <circle cx="6" cy="12" r="3" fill={color} />
+          <circle cx="18" cy="19" r="3" fill={color} />
+          <path
+            d="M8.59 13.51 L15.42 17.49"
+            stroke={color}
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          <path
+            d="M15.41 6.51 L8.59 10.49"
+            stroke={color}
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </svg>
+      );
+    };
+
+    const DetailIcon = ({ size = 24, color = '#f97316', className = '' }) => {
+      return (
+        <svg
+          width={size}
+          height={size}
+          viewBox="0 0 24 24"
+          className={className}
+        >
+          <circle cx="12" cy="12" r="10" fill={color} opacity="0.1" />
+          <circle cx="12" cy="12" r="10"
+            fill="none"
+            stroke={color}
+            strokeWidth="2"
+          />
+          <path
+            d="M12 8 L12 16"
+            stroke={color}
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          <path
+            d="M8 12 L16 12"
+            stroke={color}
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </svg>
+      );
+    };
+
+    const ApartmentIcon = ({ size = 24, color = '#f97316', className = '' }) => {
+      return (
+        <svg
+          width={size}
+          height={size}
+          viewBox="0 0 24 24"
+          className={className}
+        >
+          <rect x="4" y="4" width="16" height="16" rx="2" fill={color} opacity="0.2" />
+          <rect x="4" y="4" width="16" height="16" rx="2"
+            fill="none"
+            stroke={color}
+            strokeWidth="2"
+          />
+          <path
+            d="M4 10 L20 10"
+            stroke={color}
+            strokeWidth="2"
+          />
+          <path
+            d="M4 16 L20 16"
+            stroke={color}
+            strokeWidth="2"
+          />
+          <path
+            d="M10 4 L10 20"
+            stroke={color}
+            strokeWidth="2"
+          />
+          <path
+            d="M16 4 L16 10"
+            stroke={color}
+            strokeWidth="2"
+          />
+        </svg>
+      );
+    };
+
+    const VillaIcon = ({ size = 24, color = '#f97316', className = '' }) => {
+      return (
+        <svg
+          width={size}
+          height={size}
+          viewBox="0 0 24 24"
+          className={className}
+        >
+          <path
+            d="M6 12 L12 8 L18 12 L18 20 L6 20 L6 12 Z"
+            fill={color}
+            opacity="0.2"
+          />
+          <path
+            d="M6 12 L12 8 L18 12 L18 20 L6 20 L6 12 Z"
+            fill="none"
+            stroke={color}
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M6 12 L12 8 L18 12"
+            fill={color}
+            opacity="0.3"
+          />
+          <path
+            d="M6 12 L12 8 L18 12"
+            fill="none"
+            stroke={color}
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M12 12 L12 20"
+            stroke={color}
+            strokeWidth="2"
+          />
+          <path
+            d="M9 16 L15 16"
+            stroke={color}
+            strokeWidth="2"
+          />
+        </svg>
+      );
+    };
+
+    const CommercialIcon = ({ size = 24, color = '#f97316', className = '' }) => {
+      return (
+        <svg
+          width={size}
+          height={size}
+          viewBox="0 0 24 24"
+          className={className}
+        >
+          <rect x="4" y="6" width="16" height="14" rx="2" fill={color} opacity="0.2" />
+          <rect x="4" y="6" width="16" height="14" rx="2"
+            fill="none"
+            stroke={color}
+            strokeWidth="2"
+          />
+          <path
+            d="M4 10 L20 10"
+            stroke={color}
+            strokeWidth="2"
+          />
+          <path
+            d="M4 14 L20 14"
+            stroke={color}
+            strokeWidth="2"
+          />
+          <path
+            d="M4 18 L20 18"
+            stroke={color}
+            strokeWidth="2"
+          />
+          <rect x="8" y="2" width="8" height="4" rx="1" fill={color} />
+          <rect x="8" y="2" width="8" height="4" rx="1"
+            fill="none"
+            stroke={color}
+            strokeWidth="2"
+          />
+        </svg>
+      );
+    };
+
+    const OfficeIcon = ({ size = 24, color = '#f97316', className = '' }) => {
+      return (
+        <svg
+          width={size}
+          height={size}
+          viewBox="0 0 24 24"
+          className={className}
+        >
+          <rect x="6" y="4" width="12" height="16" rx="2" fill={color} opacity="0.2" />
+          <rect x="6" y="4" width="12" height="16" rx="2"
+            fill="none"
+            stroke={color}
+            strokeWidth="2"
+          />
+          <path
+            d="M6 8 L18 8"
+            stroke={color}
+            strokeWidth="2"
+          />
+          <path
+            d="M6 12 L18 12"
+            stroke={color}
+            strokeWidth="2"
+          />
+          <path
+            d="M6 16 L18 16"
+            stroke={color}
+            strokeWidth="2"
+          />
+          <path
+            d="M10 4 L10 20"
+            stroke={color}
+            strokeWidth="2"
+          />
+          <path
+            d="M14 4 L14 20"
+            stroke={color}
+            strokeWidth="2"
+          />
+        </svg>
+      );
+    };
+
+    // 主应用组件
+    const App = () => {
+      return (
+        <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-8">
+          <div className="max-w-7xl mx-auto">
+            {/* 标题区域 */}
+            <div className="text-center mb-12">
+              <h1 className="text-3xl sm:text-4xl font-bold mb-4">
+                房地产Web图标库
+              </h1>
+              <p className="text-gray-400 max-w-2xl mx-auto">
+                一套专为房地产Web网站设计的现代图标，包含核心功能、交互和分类图标
+              </p>
+            </div>
+
+            {/* 图标网格 */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+              <IconCard
+                name="HouseIcon"
+                icon={<HouseIcon size={32} color="#f97316" />}
+                description="房子/住宅图标（立体风格）"
+              />
+              <IconCard
+                name="MapIcon"
+                icon={<MapIcon size={32} color="#f97316" />}
+                description="地图/位置图标"
+              />
+              <IconCard
+                name="PriceIcon"
+                icon={<PriceIcon size={32} color="#f97316" />}
+                description="价格/财务图标"
+              />
+              <IconCard
+                name="AreaIcon"
+                icon={<AreaIcon size={32} color="#f97316" />}
+                description="面积/尺寸图标"
+              />
+              <IconCard
+                name="SearchIcon"
+                icon={<SearchIcon size={32} color="#f97316" />}
+                description="搜索/筛选图标"
+              />
+              <IconCard
+                name="FavoriteIcon"
+                icon={<FavoriteIcon size={32} color="#f97316" />}
+                description="收藏/喜欢图标"
+              />
+              <IconCard
+                name="CompareIcon"
+                icon={<CompareIcon size={32} color="#f97316" />}
+                description="对比/比较图标"
+              />
+              <IconCard
+                name="ShareIcon"
+                icon={<ShareIcon size={32} color="#f97316" />}
+                description="分享图标"
+              />
+              <IconCard
+                name="DetailIcon"
+                icon={<DetailIcon size={32} color="#f97316" />}
+                description="查看详情图标"
+              />
+              <IconCard
+                name="ApartmentIcon"
+                icon={<ApartmentIcon size={32} color="#f97316" />}
+                description="公寓/住宅图标"
+              />
+              <IconCard
+                name="VillaIcon"
+                icon={<VillaIcon size={32} color="#f97316" />}
+                description="别墅/豪宅图标"
+              />
+              <IconCard
+                name="CommercialIcon"
+                icon={<CommercialIcon size={32} color="#f97316" />}
+                description="商业地产图标"
+              />
+              <IconCard
+                name="OfficeIcon"
+                icon={<OfficeIcon size={32} color="#f97316" />}
+                description="写字楼图标"
+              />
+            </div>
+
+            {/* 使用说明 */}
+            <div className="mt-16 bg-gray-800 rounded-xl p-8">
+              <h2 className="text-2xl font-bold mb-6">使用说明</h2>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">1. 导入图标</h3>
+                  <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+                    <code className="text-sm text-gray-300">
+                      {`import { HouseIcon, MapIcon, PriceIcon } from './playground/icons';`}
+                    </code>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">2. 使用图标</h3>
+                  <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+                    <code className="text-sm text-gray-300">
+                      {`<HouseIcon size={24} color="#f97316" className="hover:scale-110 transition-transform" />`}
+                    </code>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">3. 自定义属性</h3>
+                  <ul className="list-disc list-inside text-gray-400 space-y-2">
+                    <li><code className="text-sm bg-gray-900 px-1 rounded">size</code>: 图标大小（默认: 24）</li>
+                    <li><code className="text-sm bg-gray-900 px-1 rounded">color</code>: 图标颜色（默认: #f97316）</li>
+                    <li><code className="text-sm bg-gray-900 px-1 rounded">className</code>: 自定义CSS类</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* 页脚 */}
+            <div className="mt-12 text-center text-gray-500 text-sm">
+              <p>© 2026 房地产Web图标库 - 为上海新房网站设计</p>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // 图标卡片组件
+    const IconCard = ({ name, icon, description }) => {
+      return (
+        <div className="bg-gray-800 rounded-xl p-6 hover:shadow-lg hover:shadow-orange-500/10 transition-all">
+          <div className="flex flex-col items-center">
+            <div className="p-4 bg-gray-700 rounded-lg mb-4">
+              {icon}
+            </div>
+            <h3 className="text-lg font-semibold mb-2">{name}</h3>
+            <p className="text-gray-400 text-center text-sm">{description}</p>
+          </div>
+        </div>
+      );
+    };
+
+    // 渲染应用
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
