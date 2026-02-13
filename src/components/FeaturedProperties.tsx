@@ -31,21 +31,22 @@ const FeaturedProperties: React.FC<FeaturedPropertiesProps> = ({
   onSetActiveFilter
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(8);
   const [projects, setProjects] = useState<NewHomeProject[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProjects, setTotalProjects] = useState(0);
+
+  const ITEMS_PER_PAGE = 8;
 
   // 从API获取楼盘数据
   useEffect(() => {
-    const loadProjects = async () => {
+    const loadProjects = async (page = 1, limit = ITEMS_PER_PAGE) => {
       setIsLoading(true);
       try {
-        const response = await fetchProjects();
-        if (response.success && response.data) {
-          // 转换API返回的数据格式以匹配本地数据结构
-          const formattedProjects = response.data.map((project: any) => {
-            // 查找对应的行政区名称
+        const response = await fetchProjects({ page, limit });
+        if (response.success && response.data && response.data.list) {
+          const formattedProjects = response.data.list.map((project: any) => {
             const district = shanghaiDistricts.find(d => d.id === project.districtId);
             return {
               id: project.id,
@@ -54,18 +55,20 @@ const FeaturedProperties: React.FC<FeaturedPropertiesProps> = ({
               subDistrictId: project.subDistrictId || project.subDistrict || '',
               price: project.price,
               priceUnit: project.priceUnit || '元/㎡',
-              area: project.area || 0,
+              area: project.areaMin || project.areaMax || 0,
               areaRange: project.areaRange || '',
               status: project.status || '在售',
-              features: project.features || project.tags || [],
+              features: project.features ? project.features.map((f: any) => f.feature) : project.tags || [],
               description: project.description || '',
-              image: project.image || '',
+              image: project.mainImage.startsWith('http') ? project.mainImage : `http://localhost:3001${project.mainImage}`,
               developer: project.developer || '',
               address: project.address || '',
               coordinates: project.coordinates || { lat: 0, lng: 0 }
             };
           });
           setProjects(formattedProjects);
+          setTotalPages(response.data.totalPages || 1);
+          setTotalProjects(response.data.total || 0);
         }
       } catch (error) {
         console.error('加载楼盘数据失败:', error);
@@ -74,32 +77,30 @@ const FeaturedProperties: React.FC<FeaturedPropertiesProps> = ({
       }
     };
 
-    loadProjects();
-  }, []);
+    loadProjects(currentPage, ITEMS_PER_PAGE);
+  }, [currentPage, activeFilter]);
 
   // 筛选和搜索功能
-  const filteredProjects = projects.filter(project => {
-    const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         project.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = activeFilter === 'all' || project.districtId === activeFilter;
-    return matchesSearch && matchesFilter;
-  });
+  const filteredProjects = projects;
 
-  // 分页功能
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentProjects = filteredProjects.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredProjects.length / itemsPerPage);
+  // 显示的楼盘数量
+  const displayedProjects = filteredProjects;
 
-  // 处理页面变化
-  const handlePageChange = (pageNumber: number) => {
-    setCurrentPage(pageNumber);
+  // 分页控制
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
   };
+
+  // 重置页码当筛选变化时
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeFilter]);
 
   // 处理筛选变化
   const handleFilterChange = (filter: string) => {
     onSetActiveFilter(filter);
-    setCurrentPage(1); // 重置到第一页
   };
 
   return (
@@ -172,7 +173,7 @@ const FeaturedProperties: React.FC<FeaturedPropertiesProps> = ({
         {/* 楼盘列表 */}
         {!isLoading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            {currentProjects.map((project, index) => (
+            {displayedProjects.map((project, index) => (
               <AnimatedCard
                 key={project.id}
                 delay={index * 100}
@@ -193,7 +194,7 @@ const FeaturedProperties: React.FC<FeaturedPropertiesProps> = ({
                       area: originalProject?.area || 0,
                       areaRange: project.areaRange,
                       status: originalProject?.status || '在售',
-                      features: project.features || project.tags || [],
+                      features: project.features || [],
                       description: project.description,
                       image: project.image,
                       developer: originalProject?.developer || '',
@@ -246,8 +247,8 @@ const FeaturedProperties: React.FC<FeaturedPropertiesProps> = ({
                             area: originalProject?.area || 0,
                             areaRange: project.areaRange,
                             status: originalProject?.status || '在售',
-                            features: project.features || project.tags || [],
-                            description: project.description,
+                      features: project.features || [],
+                      description: project.description,
                             image: project.image,
                             developer: originalProject?.developer || '',
                             address: originalProject?.address || '',
@@ -279,8 +280,8 @@ const FeaturedProperties: React.FC<FeaturedPropertiesProps> = ({
                             area: originalProject?.area || 0,
                             areaRange: project.areaRange,
                             status: originalProject?.status || '在售',
-                            features: project.features || project.tags || [],
-                            description: project.description,
+                      features: project.features || [],
+                      description: project.description,
                             image: project.image,
                             developer: originalProject?.developer || '',
                             address: originalProject?.address || '',
@@ -346,7 +347,7 @@ const FeaturedProperties: React.FC<FeaturedPropertiesProps> = ({
         )}
 
         {/* 空状态 */}
-        {!isLoading && currentProjects.length === 0 && (
+        {!isLoading && displayedProjects.length === 0 && (
           <div className="text-center py-16">
             <Building2 className="w-16 h-16 text-gray-600 mx-auto mb-4" />
             <p className="text-gray-400">暂无符合条件的楼盘</p>
@@ -354,68 +355,73 @@ const FeaturedProperties: React.FC<FeaturedPropertiesProps> = ({
         )}
 
         {/* 分页组件 */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center mt-12">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handlePageChange(1)}
-                disabled={currentPage === 1}
-                className="px-4 py-2 rounded-lg bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                首页
-              </button>
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="px-4 py-2 rounded-lg bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                上一页
-              </button>
-              
-              {/* 页码按钮 */}
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNumber;
-                if (totalPages <= 5) {
-                  pageNumber = i + 1;
-                } else {
-                  if (currentPage <= 3) {
-                    pageNumber = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNumber = totalPages - 4 + i;
-                  } else {
-                    pageNumber = currentPage - 2 + i;
-                  }
-                }
-                return (
-                  <button
-                    key={pageNumber}
-                    onClick={() => handlePageChange(pageNumber)}
-                    className={`px-4 py-2 rounded-lg transition-all ${
-                      currentPage === pageNumber
-                        ? 'bg-orange-500 text-white'
-                        : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    {pageNumber}
-                  </button>
-                );
-              })}
-              
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="px-4 py-2 rounded-lg bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                下一页
-              </button>
+        {!isLoading && displayedProjects.length > 0 && totalPages > 1 && (
+          <div className="flex items-center justify-center mt-12 gap-2">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-4 py-2 rounded-lg text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-white/5 text-gray-300 hover:text-white hover:bg-white/10"
+            >
+              上一页
+            </button>
+            
+            {/* 页码按钮 */}
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => handlePageChange(pageNum)}
+                  className={`px-4 py-2 rounded-lg text-sm transition-all ${currentPage === pageNum ? 'bg-orange-500 text-white' : 'bg-white/5 text-gray-300 hover:text-white hover:bg-white/10'}`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+            
+            {/* 省略号 */}
+            {totalPages > 5 && (
+              <span className="px-4 py-2 text-gray-400">...</span>
+            )}
+            
+            {/* 最后一页 */}
+            {totalPages > 5 && (
               <button
                 onClick={() => handlePageChange(totalPages)}
-                disabled={currentPage === totalPages}
-                className="px-4 py-2 rounded-lg bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`px-4 py-2 rounded-lg text-sm transition-all ${currentPage === totalPages ? 'bg-orange-500 text-white' : 'bg-white/5 text-gray-300 hover:text-white hover:bg-white/10'}`}
               >
-                末页
+                {totalPages}
               </button>
+            )}
+            
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="px-4 py-2 rounded-lg text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-white/5 text-gray-300 hover:text-white hover:bg-white/10"
+            >
+              下一页
+            </button>
+            
+            {/* 页码信息 */}
+            <div className="ml-4 text-gray-400 text-sm">
+              第 {currentPage} / {totalPages} 页
             </div>
+          </div>
+        )}
+
+        {/* 总项目数 */}
+        {!isLoading && displayedProjects.length > 0 && (
+          <div className="text-center mt-6 text-gray-400 text-sm">
+            共 {totalProjects} 个楼盘
           </div>
         )}
       </div>
