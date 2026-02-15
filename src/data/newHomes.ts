@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 上海新房项目数据
  * 从链家网站爬取的真实数据
  */
@@ -13,6 +13,8 @@ export interface NewHomeProject {
   area: number;
   areaRange: string;
   status: '在售' | '待售' | '售罄';
+  publishDate?: string;
+  floorRange?: string;
   features: string[];
   description: string;
   image: string;

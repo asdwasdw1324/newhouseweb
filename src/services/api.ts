@@ -1,13 +1,17 @@
 import axios from 'axios';
+import { shanghaiDistricts } from '../data/districts';
+import { newHomeProjects } from '../data/newHomes';
 
 // API基础配置
 const apiClient = axios.create({
   baseURL: 'http://localhost:3001/api',
-  timeout: 10000,
+  timeout: 5000,
   headers: {
     'Content-Type': 'application/json'
   }
 });
+
+const PROJECTS_FAST_TIMEOUT_MS = 1200;
 
 // 错误处理
 apiClient.interceptors.response.use(
@@ -24,8 +28,8 @@ export const fetchDistricts = async () => {
     const response = await apiClient.get('/districts');
     return response.data;
   } catch (error) {
-    console.error('获取区域数据失败:', error);
-    return { success: false, error: error.message };
+    console.error('获取区域数据失败，使用本地数据:', error);
+    return { success: true, data: shanghaiDistricts };
   }
 };
 
@@ -63,11 +67,58 @@ export const fetchProjects = async (params?: {
   limit?: number;
 }) => {
   try {
-    const response = await apiClient.get('/projects', { params });
+    const response = await apiClient.get('/projects', { params, timeout: PROJECTS_FAST_TIMEOUT_MS });
     return response.data;
   } catch (error) {
-    console.error('获取楼盘数据失败:', error);
-    return { success: false, error: error.message };
+    console.error('获取楼盘数据失败，使用本地数据:', error);
+    
+    let filteredProjects = [...newHomeProjects];
+    
+    if (params?.district) {
+      filteredProjects = filteredProjects.filter(p => p.districtId === params.district);
+    }
+    
+    if (params?.subDistrict) {
+      filteredProjects = filteredProjects.filter(p => p.subDistrictId === params.subDistrict);
+    }
+    
+    if (params?.minPrice) {
+      filteredProjects = filteredProjects.filter(p => p.price >= params.minPrice!);
+    }
+    
+    if (params?.maxPrice) {
+      filteredProjects = filteredProjects.filter(p => p.price <= params.maxPrice!);
+    }
+    
+    if (params?.status) {
+      filteredProjects = filteredProjects.filter(p => p.status === params.status);
+    }
+    
+    if (params?.keyword) {
+      const keyword = params.keyword.toLowerCase();
+      filteredProjects = filteredProjects.filter(p => 
+        p.name.toLowerCase().includes(keyword) || 
+        p.description.toLowerCase().includes(keyword)
+      );
+    }
+    
+    const page = params?.page || 1;
+    const limit = params?.limit || 10;
+    const total = filteredProjects.length;
+    const totalPages = Math.ceil(total / limit);
+    const start = (page - 1) * limit;
+    const list = filteredProjects.slice(start, start + limit);
+    
+    return { 
+      success: true, 
+      data: { 
+        list, 
+        total, 
+        page, 
+        limit, 
+        totalPages 
+      } 
+    };
   }
 };
 
@@ -156,8 +207,30 @@ export const fetchMarketTrends = async () => {
     }
     return { success: false, error: '无法获取行情数据' };
   } catch (error) {
-    console.error('获取行情数据失败:', error);
-    return { success: false, error: error.message };
+    console.error('获取行情数据失败，使用本地数据:', error);
+    
+    const trends = shanghaiDistricts.map(district => {
+      const districtProjects = newHomeProjects.filter(p => p.districtId === district.id);
+      const avgPrice = districtProjects.length > 0 
+        ? Math.round(districtProjects.reduce((sum, p) => sum + p.price, 0) / districtProjects.length)
+        : 0;
+      
+      const sellingCount = districtProjects.filter(p => p.status === '在售').length;
+      const pendingCount = districtProjects.filter(p => p.status === '待售').length;
+      const soldoutCount = districtProjects.filter(p => p.status === '售罄').length;
+      
+      return {
+        district: district.name,
+        districtId: district.id,
+        avgPrice,
+        totalProjects: districtProjects.length,
+        sellingCount,
+        pendingCount,
+        soldoutCount
+      };
+    });
+    
+    return { success: true, data: trends };
   }
 };
 

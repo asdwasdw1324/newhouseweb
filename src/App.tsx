@@ -39,6 +39,14 @@ function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all');
 
+  // Preload featured chunk in idle time to reduce first-switch latency.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      import('./components/FeaturedProperties');
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   // 导航处理 - 直接切换页面
   const handleNavigate = useCallback((view: ViewMode) => {
     console.log('handleNavigate called with view:', view);

@@ -1,289 +1,319 @@
 #!/usr/bin/env node
 
-/**
- * 链家网站新房数据爬虫
- * 爬取上海地区的新房项目数据和图片
- */
-
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import * as fs from 'fs';
-import * as path from 'path';
+import fs from 'fs';
+import path from 'path';
 
-const BASE_URL = 'https://sh.lianjia.com';
-const NEW_HOME_URL = `${BASE_URL}/loupan/pg`;
-const IMAGES_DIR = path.join(process.cwd(), 'public', 'images', 'projects');
+const BASE_URL = 'https://sh.fang.ke.com';
+const LIST_ROOT = '/loupan/';
+const PAGE_SIZE = 10;
 
-// 创建图片存储目录
-if (!fs.existsSync(IMAGES_DIR)) {
-  fs.mkdirSync(IMAGES_DIR, { recursive: true });
-  console.log(`创建图片存储目录: ${IMAGES_DIR}`);
+const REQUEST_TIMEOUT_MS = Number(process.env.CRAWL_TIMEOUT_MS || 30000);
+const REQUEST_MIN_DELAY_MS = Number(process.env.CRAWL_MIN_DELAY_MS || 350);
+const REQUEST_MAX_DELAY_MS = Number(process.env.CRAWL_MAX_DELAY_MS || 900);
+const ROOT_MAX_PAGES = Number(process.env.CRAWL_ROOT_MAX_PAGES || 3);
+const SHARD_MAX_PAGES = Number(process.env.CRAWL_SHARD_MAX_PAGES || 3);
+const MAX_SLUGS = Number(process.env.CRAWL_MAX_SLUGS || 0);
+
+const OUTPUT_FILE = path.join(process.cwd(), 'src', 'data', 'newHomes.ts');
+
+const DISTRICT_ID_MAP = {
+  '娴︿笢': 'pudong',
+  '娴︿笢鏂板尯': 'pudong',
+  '榛勬郸': 'huangpu',
+  '寰愭眹': 'xuhui',
+  '闀垮畞': 'changning',
+  '闈欏畨': 'jingan',
+  '鏅檧': 'putuo',
+  '铏瑰彛': 'hongkou',
+  '鏉ㄦ郸': 'yangpu',
+  '闂佃': 'minhang',
+  '瀹濆北': 'baoshan',
+  '鍢夊畾': 'jiading',
+  '鏉炬睙': 'songjiang',
+  '闈掓郸': 'qingpu',
+  '濂夎搐': 'fengxian',
+  '宕囨槑': 'chongming',
+  '閲戝北': 'jinshan'
+};
+
+const SHANGHAI_DISTRICT_IDS = new Set([
+  'pudong',
+  'huangpu',
+  'xuhui',
+  'changning',
+  'jingan',
+  'putuo',
+  'hongkou',
+  'yangpu',
+  'minhang',
+  'baoshan',
+  'jiading',
+  'songjiang',
+  'qingpu',
+  'fengxian',
+  'chongming',
+  'jinshan'
+]);
+
+function headers() {
+  return {
+    'User-Agent':
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+    Referer: `${BASE_URL}${LIST_ROOT}`,
+    Connection: 'keep-alive'
+  };
 }
 
-/**
- * 爬取链家新房数据
- */
-async function crawlLianjiaNewHomes() {
-  try {
-    console.log('开始爬取链家新房数据...');
-    
-    const allProjects = [];
-    const maxPages = 20; // 完整模式，爬取20页
-    
-    for (let page = 1; page <= maxPages; page++) {
-      console.log(`爬取第 ${page} 页...`);
-      
-      const url = `${NEW_HOME_URL}${page}`;
-      
-      try {
-        // 随机延迟，避免被反爬
-        const randomDelay = Math.floor(Math.random() * 3000) + 2000; // 2-5秒
-        console.log(`等待 ${randomDelay}ms 后请求...`);
-        await new Promise(resolve => setTimeout(resolve, randomDelay));
-        
-        const response = await axios.get(url, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-            'Accept-Language': 'zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
-            'Cache-Control': 'max-age=0',
-            'Referer': BASE_URL,
-            'Origin': BASE_URL,
-            'Sec-Fetch-Dest': 'document',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'same-origin',
-            'Sec-Fetch-User': '?1'
-          },
-          timeout: 30000,
-          validateStatus: (status) => {
-            return status >= 200 && status < 300; // 只接受200-299状态码
-          }
-        });
-        
-        console.log(`状态码: ${response.status}`);
-        console.log(`响应长度: ${response.data.length} 字符`);
-        
-        // 保存响应到文件以便调试
-        const debugFile = `debug-response-page-${page}.html`;
-        fs.writeFileSync(debugFile, response.data, 'utf8');
-        console.log(`已保存响应到 ${debugFile}`);
-        
-        // 检查是否被反爬
-        if (response.data.length < 10000) {
-          console.log('⚠️  响应长度异常，可能被反爬');
-          console.log('响应前200字符:', response.data.substring(0, 200));
-        }
-        
-        const $ = cheerio.load(response.data);
-        
-        // 尝试不同的选择器
-        const projectElements1 = $('.resblock-list');
-        const projectElements2 = $('.loupan-item');
-        const projectElements3 = $('.item');
-        
-        console.log(`找到项目元素: ${projectElements1.length} (resblock-list), ${projectElements2.length} (loupan-item), ${projectElements3.length} (item)`);
-        
-        let projectElements = projectElements1;
-        if (projectElements.length === 0) {
-          projectElements = projectElements2;
-        }
-        if (projectElements.length === 0) {
-          projectElements = projectElements3;
-        }
-        
-        if (projectElements.length === 0) {
-          console.log('没有找到更多项目，停止爬取');
-          break;
-        }
-        
-        // 收集所有异步操作
-        const projectPromises = [];
-        projectElements.each((index, element) => {
-          projectPromises.push(parseProject($, element));
-        });
-        
-        // 等待所有项目解析完成
-        const parsedProjects = await Promise.all(projectPromises);
-        const validProjects = parsedProjects.filter(project => project !== null);
-        
-        allProjects.push(...validProjects);
-        console.log(`第 ${page} 页添加 ${validProjects.length} 个项目`);
-        
-        console.log(`第 ${page} 页完成，当前共 ${allProjects.length} 个项目`);
-        
-        // 延迟，避免被封IP
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-      } catch (pageError) {
-        console.error(`第 ${page} 页爬取失败:`, pageError.message);
-        continue;
-      }
-    }
-    
-    console.log(`爬取完成，共获取 ${allProjects.length} 个新房项目`);
-    
-    if (allProjects.length > 0) {
-      // 保存数据
-      saveProjects(allProjects);
-    } else {
-      console.log('未获取到项目数据，可能被反爬或选择器错误');
-    }
-    
-  } catch (error) {
-    console.error('爬取失败:', error.message);
-    console.error('错误堆栈:', error.stack);
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+function randomDelay() {
+  const span = Math.max(0, REQUEST_MAX_DELAY_MS - REQUEST_MIN_DELAY_MS);
+  return REQUEST_MIN_DELAY_MS + Math.floor(Math.random() * (span + 1));
+}
+
+function normalizeText(v) {
+  return (v || '').replace(/\s+/g, ' ').trim();
+}
+
+function normalizeImageUrl(url) {
+  if (!url) return '';
+  if (url.startsWith('//')) return `https:${url}`;
+  if (url.startsWith('/')) return `${BASE_URL}${url}`;
+  return url;
+}
+
+function hashString(input) {
+  let h = 0;
+  for (let i = 0; i < input.length; i += 1) {
+    h = (h << 5) - h + input.charCodeAt(i);
+    h |= 0;
   }
+  return Math.abs(h).toString(36);
 }
 
-/**
- * 解析单个项目数据
- */
-async function parseProject($, element) {
-  try {
-    const name = $(element).find('.resblock-name h2 a').text().trim();
-    const locationSpans = $(element).find('.resblock-location span');
-    const district = locationSpans.eq(0).text().trim();
-    const subDistrict = locationSpans.eq(1).text().trim();
-    const address = $(element).find('.resblock-location a').text().trim();
-    const priceText = $(element).find('.resblock-price .main-price .number').text().trim();
-    const priceUnit = $(element).find('.resblock-price .main-price .desc').text().trim();
-    const areaRange = $(element).find('.resblock-area span').text().trim();
-    const tags = $(element).find('.resblock-tag span').map((i, el) => $(el).text().trim()).get();
-    const status = $(element).find('.sale-status').text().trim();
-    const imageSrc = $(element).find('.resblock-img-wrapper img').attr('data-original') || '';
-    
-    if (!name) return null;
-    
-    const price = parseFloat(priceText.replace(/,/g, '')) || 0;
-    
-    // 生成唯一ID
-    const id = `lj-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-    
-    // 下载图片
-    let localImagePath = '';
-    if (imageSrc) {
-      localImagePath = await downloadImage(imageSrc, id);
-    }
-    
-    return {
-      id,
+function getDistrictId(districtName) {
+  const clean = normalizeText(districtName).replace(/鍖?/, '');
+  if (DISTRICT_ID_MAP[clean]) return DISTRICT_ID_MAP[clean];
+  return clean.toLowerCase() || 'unknown';
+}
+
+function isShanghaiDistrict(districtName) {
+  return SHANGHAI_DISTRICT_IDS.has(getDistrictId(districtName));
+}
+
+function mapStatus(statusText) {
+  const text = normalizeText(statusText);
+  if (text.includes('寰呭敭')) return '寰呭敭';
+  if (text.includes('鍞絼')) return '鍞絼';
+  return '鍦ㄥ敭';
+}
+
+function parsePrice(text) {
+  const matched = normalizeText(text).replace(/,/g, '').match(/(\d+(?:\.\d+)?)/);
+  return matched ? Number(matched[1]) : 0;
+}
+
+function extractTotalPages($) {
+  const totalCount = Number($('.page-box').first().attr('data-total-count') || 0);
+  if (!Number.isFinite(totalCount) || totalCount <= 0) return 1;
+  return Math.ceil(totalCount / PAGE_SIZE);
+}
+
+function isLoginOrBlocked(html) {
+  const h = String(html || '');
+  return h.includes('<title>鐧诲綍</title>') || h.includes('loginApp') || h.length < 2000;
+}
+
+function buildListUrl(basePath, page) {
+  const cleaned = basePath.endsWith('/') ? basePath : `${basePath}/`;
+  if (page <= 1) return `${BASE_URL}${cleaned}`;
+  return `${BASE_URL}${cleaned}pg${page}/`;
+}
+
+async function fetchHtml(url) {
+  const resp = await axios.get(url, {
+    timeout: REQUEST_TIMEOUT_MS,
+    headers: headers(),
+    validateStatus: (s) => s >= 200 && s < 300
+  });
+  return String(resp.data || '');
+}
+
+function parseProjects($, sourceTag, page) {
+  const projects = [];
+  const items = $('li.resblock-list');
+
+  for (let i = 0; i < items.length; i += 1) {
+    const el = items.eq(i);
+
+    const name =
+      normalizeText(el.find('.resblock-name a').first().text()) ||
+      normalizeText(el.find('.resblock-name').first().text());
+    if (!name) continue;
+
+    const locationSpans = el.find('.resblock-location span');
+    const district = normalizeText(locationSpans.eq(0).text());
+    const subDistrict = normalizeText(locationSpans.eq(1).text());
+    const address = normalizeText(el.find('.resblock-location a').first().text());
+    if (!isShanghaiDistrict(district)) continue;
+
+    const price = parsePrice(el.find('.resblock-price .main-price .number').first().text());
+    const priceUnit = normalizeText(el.find('.resblock-price .main-price .desc').first().text()) || '鍏?銕?鍧囦环)';
+    const areaRange = normalizeText(el.find('.resblock-area').first().text());
+    const status = mapStatus(el.find('.sale-status').first().text());
+
+    const features = el
+      .find('.resblock-tag span')
+      .map((_, node) => normalizeText($(node).text()))
+      .get()
+      .filter(Boolean);
+
+    const image = normalizeImageUrl(
+      el.find('.resblock-img-wrapper img').attr('data-original') ||
+        el.find('.resblock-img-wrapper img').attr('src') ||
+        ''
+    );
+
+    const districtId = getDistrictId(district);
+    const uniq = `${name}|${address || district}|${districtId}`;
+
+    projects.push({
+      id: `lj-${hashString(uniq)}`,
       name,
-      districtId: getDistrictId(district),
-      subDistrictId: subDistrict,
+      districtId,
+      subDistrictId: subDistrict || district,
       price,
-      priceUnit: priceUnit || '元/㎡',
+      priceUnit,
       area: 0,
       areaRange,
-      status: getStatus(status),
-      features: tags,
-      description: `${name}位于${district}${subDistrict}，${tags.join('、')}`,
-      image: localImagePath || `https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80`,
+      status,
+      features,
+      description: `${name}浣嶄簬${district}${subDistrict ? ` ${subDistrict}` : ''}${features.length ? `锛?{features.join('銆?)}` : ''}`,
+      image: image || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80',
       developer: '',
       address: address || `${district}${subDistrict}`,
       coordinates: {
-        lat: 31.23 + (Math.random() * 0.1),
-        lng: 121.47 + (Math.random() * 0.1)
-      }
-    };
-  } catch (error) {
-    console.error('解析项目失败:', error.message);
-    return null;
-  }
-}
-
-/**
- * 获取区域ID
- */
-function getDistrictId(districtName) {
-  const districtMap = {
-    '浦东新区': 'pudong',
-    '黄浦区': 'huangpu',
-    '徐汇区': 'xuhui',
-    '长宁区': 'changning',
-    '静安区': 'jingan',
-    '普陀区': 'putuo',
-    '虹口区': 'hongkou',
-    '杨浦区': 'yangpu',
-    '宝山区': 'baoshan',
-    '闵行区': 'minhang',
-    '嘉定区': 'jiading',
-    '松江区': 'songjiang',
-    '青浦区': 'qingpu',
-    '奉贤区': 'fengxian',
-    '崇明区': 'chongming'
-  };
-  
-  return districtMap[districtName] || districtName.toLowerCase();
-}
-
-/**
- * 获取状态
- */
-function getStatus(statusText) {
-  if (statusText.includes('在售')) return '在售';
-  if (statusText.includes('待售')) return '待售';
-  if (statusText.includes('售罄')) return '售罄';
-  return '在售';
-}
-
-/**
- * 下载图片并保存到本地
- */
-async function downloadImage(url, projectId) {
-  try {
-    if (!url || url === '') {
-      return '';
-    }
-    
-    // 确保URL完整
-    let fullUrl = url;
-    if (!url.startsWith('http')) {
-      fullUrl = BASE_URL + url;
-    }
-    
-    // 生成唯一的图片文件名
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 1000);
-    const extension = url.split('.').pop().split('?')[0].split('#')[0];
-    const safeExtension = extension && extension.length <= 5 ? extension : 'jpg';
-    const fileName = `project_${projectId}_${timestamp}_${random}.${safeExtension}`;
-    const filePath = path.join(IMAGES_DIR, fileName);
-    
-    // 下载图片
-    const response = await axios.get(fullUrl, {
-      responseType: 'arraybuffer',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        lat: 31.23 + (Math.random() - 0.5) * 0.2,
+        lng: 121.47 + (Math.random() - 0.5) * 0.2
       },
-      timeout: 30000
+      __source: `${sourceTag}:p${page}`
     });
-    
-    // 保存图片
-    fs.writeFileSync(filePath, response.data);
-    console.log(`图片下载成功: ${fileName}`);
-    
-    // 返回相对路径，用于前端引用
-    return `/images/projects/${fileName}`;
-    
-  } catch (error) {
-    console.error(`图片下载失败: ${url}`, error.message);
-    return '';
   }
+
+  return projects;
 }
 
-/**
- * 保存项目数据
- */
-function saveProjects(projects) {
-  // 简单方法：直接使用相对路径
-  const outputPath = path.join(process.cwd(), 'src/data/newHomes.ts');
-  
-  const dataContent = `/**
- * 上海新房项目数据
- * 从链家网站爬取的真实数据
+function dedupe(projects) {
+  const seen = new Set();
+  const out = [];
+  for (const p of projects) {
+    const key = `${p.name}|${p.address}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(p);
+  }
+  return out;
+}
+
+function loadSeedSlugs() {
+  const seeds = new Set([
+    'pudong', 'minhang', 'xuhui', 'changning', 'huangpu', 'jingan', 'putuo', 'hongkou', 'yangpu',
+    'baoshan', 'jiading', 'songjiang', 'qingpu', 'fengxian', 'jinshan', 'chongming'
+  ]);
+
+  const file = path.join(process.cwd(), 'src', 'data', 'districts.ts');
+  if (fs.existsSync(file)) {
+    const text = fs.readFileSync(file, 'utf8');
+    const re = /id:\s*'([a-z0-9]+)'/g;
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      const slug = m[1];
+      if (slug && slug.length >= 2 && slug !== 'unknown') {
+        seeds.add(slug);
+      }
+    }
+  }
+
+  return Array.from(seeds);
+}
+
+async function discoverSlugsFromHome() {
+  const html = await fetchHtml(`${BASE_URL}${LIST_ROOT}`);
+  const $ = cheerio.load(html);
+  const slugs = new Set();
+
+  $('a').each((_, node) => {
+    const href = normalizeText($(node).attr('href') || '');
+    if (!href) return;
+
+    const matched = href.match(/(?:https?:)?\/\/sh\.fang\.ke\.com\/loupan\/([a-z0-9]+)\/?$/i)
+      || href.match(/^\/loupan\/([a-z0-9]+)\/?$/i);
+
+    if (!matched) return;
+
+    const slug = matched[1].toLowerCase();
+    if (!slug) return;
+
+    if (slug.startsWith('p_')) return;
+    if (/^pg\d+$/.test(slug)) return;
+
+    slugs.add(slug);
+  });
+
+  return Array.from(slugs);
+}
+
+async function crawlPath(basePath, maxPages, tag) {
+  const all = [];
+  let totalPages = maxPages;
+
+  for (let page = 1; page <= totalPages; page += 1) {
+    const url = buildListUrl(basePath, page);
+
+    try {
+      const html = await fetchHtml(url);
+      if (isLoginOrBlocked(html)) {
+        console.log(`[crawl] blocked at ${tag} page=${page}`);
+        break;
+      }
+
+      const $ = cheerio.load(html);
+      if (page === 1) {
+        const detected = extractTotalPages($);
+        totalPages = Math.min(maxPages, Math.max(1, detected));
+      }
+
+      const items = parseProjects($, tag, page);
+      if (items.length === 0) {
+        console.log(`[crawl] empty ${tag} page=${page}`);
+        break;
+      }
+
+      all.push(...items);
+      console.log(`[crawl] ${tag} ${page}/${totalPages}: ${items.length}`);
+    } catch (e) {
+      console.log(`[crawl] fail ${tag} page=${page}: ${e.message}`);
+    }
+
+    await sleep(randomDelay());
+  }
+
+  return all;
+}
+
+function generateTs(projects) {
+  const list = projects.map(({ __source, ...rest }) => rest);
+
+  return `/**
+ * 涓婃捣鏂版埧椤圭洰鏁版嵁
+ * 浠庨摼瀹剁綉绔欐姄鍙栫殑鐪熷疄鏁版嵁
+ * Generated at: ${new Date().toISOString()}
  */
 
 export interface NewHomeProject {
@@ -295,7 +325,9 @@ export interface NewHomeProject {
   priceUnit: string;
   area: number;
   areaRange: string;
-  status: '在售' | '待售' | '售罄';
+  status: '鍦ㄥ敭' | '寰呭敭' | '鍞絼';
+  publishDate?: string;
+  floorRange?: string;
   features: string[];
   description: string;
   image: string;
@@ -307,7 +339,7 @@ export interface NewHomeProject {
   };
 }
 
-export const newHomeProjects: NewHomeProject[] = ${JSON.stringify(projects, null, 2)};
+export const newHomeProjects: NewHomeProject[] = ${JSON.stringify(list, null, 2)};
 
 export const getProjectsByDistrict = (districtId: string): NewHomeProject[] => {
   return newHomeProjects.filter((project) => project.districtId === districtId);
@@ -329,43 +361,53 @@ export const getRandomProjects = (count: number): NewHomeProject[] => {
 };
 
 export const getOnlyNewHomes = (): NewHomeProject[] => {
-  return newHomeProjects.filter(project => project.status === '在售' || project.status === '待售');
+  return newHomeProjects.filter((project) => project.status === '鍦ㄥ敭' || project.status === '寰呭敭');
 };
 
 export const addLianjiaProjects = (lianjiaProjects: NewHomeProject[]): NewHomeProject[] => {
   return [...newHomeProjects, ...lianjiaProjects];
 };
 `;
-  
-  fs.writeFileSync(outputPath, dataContent, 'utf8');
-  console.log(`数据保存成功，共 ${projects.length} 个项目，保存到 ${outputPath}`);
 }
 
-/**
- * 主函数
- */
 async function main() {
-  console.log('链家新房数据爬虫');
-  console.log('='.repeat(50));
-  console.log('当前目录:', process.cwd());
-  console.log('脚本路径:', import.meta.url);
-  
-  try {
-    // 检查依赖
-    console.log('检查依赖...');
-    await import('axios');
-    await import('cheerio');
-    console.log('依赖检查完成');
-    
-    // 开始爬取
-    console.log('开始爬取链家新房数据...');
-    await crawlLianjiaNewHomes();
-    console.log('爬取完成');
-  } catch (error) {
-    console.error('主函数错误:', error.message);
-    console.error('错误堆栈:', error.stack);
+  console.log('[crawl] strategy: root + shard crawl');
+  const raw = [];
+
+  raw.push(...(await crawlPath('/loupan/', ROOT_MAX_PAGES, 'root')));
+
+  const seedSlugs = loadSeedSlugs();
+  const discovered = await discoverSlugsFromHome();
+  const discoveredSlugs = Array.from(new Set([...seedSlugs, ...discovered]));
+  const slugs = MAX_SLUGS > 0 ? discoveredSlugs.slice(0, MAX_SLUGS) : discoveredSlugs;
+
+  console.log(`[crawl] shard slugs: ${slugs.length}`);
+
+  for (let i = 0; i < slugs.length; i += 1) {
+    const slug = slugs[i];
+    const basePath = `/loupan/${slug}/`;
+    const tag = `slug:${slug}`;
+
+    const items = await crawlPath(basePath, SHARD_MAX_PAGES, tag);
+    raw.push(...items);
+
+    if ((i + 1) % 25 === 0) {
+      const dedupedMid = dedupe(raw);
+      console.log(`[crawl] progress ${i + 1}/${slugs.length}, raw=${raw.length}, deduped=${dedupedMid.length}`);
+    }
   }
+
+  const deduped = dedupe(raw);
+  if (deduped.length === 0) {
+    throw new Error('No projects crawled.');
+  }
+
+  fs.writeFileSync(OUTPUT_FILE, generateTs(deduped), 'utf8');
+  console.log(`[crawl] done raw=${raw.length} deduped=${deduped.length}`);
+  console.log(`[crawl] wrote ${OUTPUT_FILE}`);
 }
 
-// 执行主函数
-main();
+main().catch((e) => {
+  console.error('[crawl] failed:', e.message);
+  process.exitCode = 1;
+});
