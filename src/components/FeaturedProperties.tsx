@@ -118,6 +118,12 @@ const FeaturedProperties: React.FC<FeaturedPropertiesProps> = ({
     return Array.from({ length: count }, (_, i) => i + 1);
   }, [totalPages]);
 
+  // 将拼音区域ID转换为中文区域名称
+  const getDistrictName = (districtId: string): string => {
+    const district = shanghaiDistricts.find(d => d.id === districtId);
+    return district ? district.name : districtId;
+  };
+
   return (
     <div className="px-6 py-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -155,16 +161,20 @@ const FeaturedProperties: React.FC<FeaturedPropertiesProps> = ({
               onNavigate('project-detail');
             }}
           >
-            <img src={project.image} alt={project.name} className="w-full h-40 object-cover" />
-            <div className="p-3 space-y-2">
-              <div className="text-white font-semibold line-clamp-1">{project.name}</div>
-              <div className="text-sm text-gray-300 flex items-center gap-1">
-                <MapPin className="w-4 h-4" />
-                {project.districtId} / {project.subDistrictId}
+            <img src={project.image} alt={project.name} className="w-full h-56 object-cover" />
+            <div className="p-3 space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="text-white font-semibold line-clamp-1 flex-1">{project.name}</div>
+                <div className="text-sm text-gray-300 flex items-center gap-1 ml-2">
+                  <MapPin className="w-4 h-4" />
+                  {getDistrictName(project.districtId)}
+                </div>
               </div>
-              <div className="text-orange-400">{project.price.toLocaleString()} {project.priceUnit}</div>
-              <div className="text-xs text-gray-400 line-clamp-1">{project.areaRange}</div>
-              <div className="flex items-center gap-2 pt-2">
+              <div className="flex items-center justify-between">
+                <div className="text-orange-400">{project.price.toLocaleString()} {project.priceUnit}</div>
+                <div className="text-xs text-gray-400">{project.areaRange}</div>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();

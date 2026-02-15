@@ -3,7 +3,7 @@
  * 整合所有页面和导航功能 - 传统页面切换方式
  */
 
-import React, { useState, useCallback, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useCallback, useEffect, Suspense, lazy, startTransition } from 'react';
 import './App.css';
 import './styles/globals.css';
 import Toolbar from './components/Toolbar';
@@ -34,6 +34,7 @@ function App() {
   const [selectedDistrict, setSelectedDistrict] = useState<District | null>(null);
   const [selectedSubDistrict, setSelectedSubDistrict] = useState<SubDistrict | null>(null);
   const [selectedProject, setSelectedProject] = useState<NewHomeProject | null>(null);
+  const [showProjectDetail, setShowProjectDetail] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [comparisonList, setComparisonList] = useState<NewHomeProject[]>([]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -78,8 +79,10 @@ function App() {
 
   // 项目选择处理
   const handleProjectSelect = useCallback((project: NewHomeProject) => {
-    setSelectedProject(project);
-    setCurrentView('project-detail');
+    startTransition(() => {
+      setSelectedProject(project);
+      setShowProjectDetail(true);
+    });
   }, []);
 
   // 收藏处理
@@ -185,19 +188,6 @@ function App() {
             onNavigate={handleNavigate}
           />
         );
-      case 'project-detail':
-        if (selectedProject) {
-          return (
-            <NewHomeDetail
-              project={selectedProject}
-              onBack={() => setCurrentView('featured')}
-              onFavorite={handleFavorite}
-              onAddToComparison={handleAddToComparison}
-              isFavorite={favorites.includes(selectedProject.id)}
-            />
-          );
-        }
-        return null;
       default:
         return (
           <Home
@@ -245,6 +235,17 @@ function App() {
           </Suspense>
         </div>
       </main>
+
+      {/* 项目详情滑出卡片 */}
+      {showProjectDetail && selectedProject && (
+        <NewHomeDetail
+          project={selectedProject}
+          onClose={() => setShowProjectDetail(false)}
+          onFavorite={handleFavorite}
+          onAddToComparison={handleAddToComparison}
+          isFavorite={favorites.includes(selectedProject.id)}
+        />
+      )}
 
       {/* 移动端侧边栏切换按钮 */}
       <button
