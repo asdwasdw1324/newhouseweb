@@ -56,6 +56,7 @@ const FeaturedProperties: React.FC<FeaturedPropertiesProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalProjects, setTotalProjects] = useState(0);
+  const [localFavorites, setLocalFavorites] = useState<string[]>(favorites);
 
   const applyLocalPagination = (allProjects: NewHomeProject[], page: number, limit: number) => {
     const filtered = activeFilter === 'all'
@@ -70,6 +71,33 @@ const FeaturedProperties: React.FC<FeaturedPropertiesProps> = ({
     setTotalProjects(total);
     setTotalPages(pages);
   };
+
+  useEffect(() => {
+    setLocalFavorites(favorites);
+  }, [favorites]);
+
+  useEffect(() => {
+    const handleFavoritesChange = () => {
+      const storedFavorites = localStorage.getItem('favorites');
+      if (storedFavorites) {
+        try {
+          const favoritesData = JSON.parse(storedFavorites);
+          const favoriteIds = favoritesData.map((fav: any) => fav.projectId);
+          setLocalFavorites(favoriteIds);
+        } catch (e) {
+          console.error('解析收藏数据失败:', e);
+        }
+      }
+    };
+
+    window.addEventListener('favoritesChanged', handleFavoritesChange);
+    window.addEventListener('storage', handleFavoritesChange);
+
+    return () => {
+      window.removeEventListener('favoritesChanged', handleFavoritesChange);
+      window.removeEventListener('storage', handleFavoritesChange);
+    };
+  }, []);
 
   useEffect(() => {
     const loadProjects = async (page = 1, limit = ITEMS_PER_PAGE) => {
@@ -97,26 +125,18 @@ const FeaturedProperties: React.FC<FeaturedPropertiesProps> = ({
 
           if (Array.isArray(response.data) && response.data.length > 0) {
             applyLocalPagination(response.data.map(normalizeProject), page, limit);
+            return;
           }
         }
-      } catch {
-        // keep local data silently
+      } catch (e) {
+        console.error('Failed to load projects:', e);
       } finally {
         setIsRefreshing(false);
       }
     };
 
     loadProjects(currentPage, ITEMS_PER_PAGE);
-  }, [currentPage, activeFilter]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeFilter]);
-
-  const pageNumbers = useMemo(() => {
-    const count = Math.min(5, totalPages);
-    return Array.from({ length: count }, (_, i) => i + 1);
-  }, [totalPages]);
+  }, [activeFilter, currentPage]);
 
   // 将拼音区域ID转换为中文区域名称
   const getDistrictName = (districtId: string): string => {
@@ -124,38 +144,76 @@ const FeaturedProperties: React.FC<FeaturedPropertiesProps> = ({
     return district ? district.name : districtId;
   };
 
+  const pageNumbers = useMemo(() => {
+    const pages = [];
+    for (let i = 1; i <= totalPages; i++) {
+      pages.push(i);
+    }
+    return pages;
+  }, [totalPages]);
+
   return (
-    <div className="px-6 py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl text-white">精选楼盘</h1>
-        <div className="text-sm text-gray-400">共 {totalProjects} 个项目</div>
-      </div>
+    <div className="py-8 px-6 max-w-7xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-3xl font-semibold text-white mb-6">
+          精选<span className="text-orange-500">楼盘</span>
+        </h1>
 
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => onSetActiveFilter('all')}
-          className={`px-3 py-1 rounded ${activeFilter === 'all' ? 'bg-orange-500 text-white' : 'bg-white/10 text-gray-300'}`}
-        >
-          全部
-        </button>
-        {shanghaiDistricts.map((district) => (
+        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 mb-6">
           <button
-            key={district.id}
-            onClick={() => onSetActiveFilter(district.id)}
-            className={`px-3 py-1 rounded ${activeFilter === district.id ? 'bg-orange-500 text-white' : 'bg-white/10 text-gray-300'}`}
+            onClick={() => onSetActiveFilter('all')}
+            className={`px-4 py-2 rounded ${activeFilter === 'all' ? 'bg-orange-500 text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
           >
-            {district.name}
+            全部
           </button>
-        ))}
+          {shanghaiDistricts.map((district) => (
+            <button
+              key={district.id}
+              onClick={() => onSetActiveFilter(district.id)}
+              className={`px-4 py-2 rounded text-sm ${activeFilter === district.id ? 'bg-orange-500 text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
+            >
+              {district.name}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between mb-6">
+          <p className="text-gray-400">
+            共 {totalProjects} 个楼盘
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 rounded bg-white/10 text-gray-300 disabled:opacity-50"
+            >
+              上一页
+            </button>
+            {pageNumbers.map((n) => (
+              <button
+                key={n}
+                onClick={() => setCurrentPage(n)}
+                className={`px-3 py-1 rounded ${currentPage === n ? 'bg-orange-500 text-white' : 'bg-white/10 text-gray-300'}`}
+              >
+                {n}
+              </button>
+            ))}
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 rounded bg-white/10 text-gray-300 disabled:opacity-50"
+            >
+              下一页
+            </button>
+          </div>
+        </div>
       </div>
 
-      {isRefreshing && <div className="text-gray-400 text-sm">更新中...</div>}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {projects.map((project) => (
           <div
             key={project.id}
-            className="bg-white/5 border border-white/10 rounded-xl overflow-hidden cursor-pointer"
+            className="bg-white/5 backdrop-blur-lg rounded-xl overflow-hidden cursor-pointer hover:bg-white/10 transition-all"
             onClick={() => {
               onProjectSelect(project);
               onNavigate('project-detail');
@@ -178,11 +236,12 @@ const FeaturedProperties: React.FC<FeaturedPropertiesProps> = ({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
+                    console.log('收藏按钮点击:', project.name, 'ID:', project.id);
                     onFavorite(project);
                   }}
-                  className={`p-2 rounded ${favorites.includes(project.id) ? 'bg-red-500 text-white' : 'bg-white/10 text-gray-300'}`}
+                  className={`p-2 rounded ${localFavorites.includes(project.id) ? 'bg-red-500 text-white' : 'bg-white/10 text-gray-300'}`}
                 >
-                  <Heart className={`w-4 h-4 ${favorites.includes(project.id) ? 'fill-current' : ''}`} />
+                  <Heart className={`w-4 h-4 ${localFavorites.includes(project.id) ? 'fill-current' : ''}`} />
                 </button>
                 <button
                   onClick={(e) => {
@@ -199,7 +258,7 @@ const FeaturedProperties: React.FC<FeaturedPropertiesProps> = ({
         ))}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 mt-8">
         <button
           onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
           disabled={currentPage === 1}

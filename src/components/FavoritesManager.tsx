@@ -36,27 +36,23 @@ const FavoritesManager: React.FC<FavoritesManagerProps> = ({ initialFavorites, o
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
 
-  // 初始化收藏数据
+  // 初始化分类数据
   useEffect(() => {
-    const storedFavorites = localStorage.getItem('favorites');
-    if (storedFavorites) {
-      setFavorites(JSON.parse(storedFavorites));
-    } else {
-      // 从 initialFavorites 初始化
-      const initialData: FavoriteItem[] = initialFavorites.map((projectId, index) => ({
-        id: `fav-${Date.now()}-${index}`,
-        projectId,
-        addedAt: new Date().toISOString(),
-        tags: [],
-        notes: '',
-      }));
-      setFavorites(initialData);
-      localStorage.setItem('favorites', JSON.stringify(initialData));
-    }
-
     const storedCategories = localStorage.getItem('favoriteCategories');
     if (storedCategories) {
-      setCategories(JSON.parse(storedCategories));
+      try {
+        setCategories(JSON.parse(storedCategories));
+      } catch (e) {
+        console.error('解析分类数据失败:', e);
+        const defaultCategories: Category[] = [
+          { id: 'all', name: '全部', itemIds: [] },
+          { id: 'wishlist', name: '愿望清单', itemIds: [] },
+          { id: 'considering', name: '考虑中', itemIds: [] },
+          { id: 'visited', name: '已参观', itemIds: [] },
+        ];
+        setCategories(defaultCategories);
+        localStorage.setItem('favoriteCategories', JSON.stringify(defaultCategories));
+      }
     } else {
       const defaultCategories: Category[] = [
         { id: 'all', name: '全部', itemIds: [] },
@@ -67,12 +63,56 @@ const FavoritesManager: React.FC<FavoritesManagerProps> = ({ initialFavorites, o
       setCategories(defaultCategories);
       localStorage.setItem('favoriteCategories', JSON.stringify(defaultCategories));
     }
-  }, [initialFavorites]);
+  }, []);
 
-  // 保存收藏数据到本地存储
+  // 初始化收藏数据
   useEffect(() => {
-    localStorage.setItem('favorites', JSON.stringify(favorites));
-  }, [favorites]);
+    const loadFavorites = () => {
+      const storedFavorites = localStorage.getItem('favorites');
+      if (storedFavorites) {
+        try {
+          const parsedFavorites = JSON.parse(storedFavorites);
+          console.log('从localStorage加载收藏数据:', parsedFavorites);
+          setFavorites(parsedFavorites);
+        } catch (e) {
+          console.error('解析收藏数据失败:', e);
+          setFavorites([]);
+        }
+      } else if (initialFavorites.length > 0) {
+        // 只有当localStorage中没有数据且initialFavorites有数据时才初始化
+        const initialData: FavoriteItem[] = initialFavorites.map((projectId, index) => ({
+          id: `fav-${Date.now()}-${index}`,
+          projectId,
+          addedAt: new Date().toISOString(),
+          tags: [],
+          notes: '',
+        }));
+        console.log('从initialFavorites初始化收藏数据:', initialData);
+        setFavorites(initialData);
+        localStorage.setItem('favorites', JSON.stringify(initialData));
+      }
+    };
+
+    loadFavorites();
+
+    const handleFavoritesChange = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      console.log('收到favoritesChanged事件:', customEvent.detail);
+      if (customEvent.detail) {
+        setFavorites(customEvent.detail);
+      } else {
+        loadFavorites();
+      }
+    };
+
+    window.addEventListener('favoritesChanged', handleFavoritesChange);
+    window.addEventListener('storage', loadFavorites);
+
+    return () => {
+      window.removeEventListener('favoritesChanged', handleFavoritesChange);
+      window.removeEventListener('storage', loadFavorites);
+    };
+  }, []);
 
   // 保存分类数据到本地存储
   useEffect(() => {
@@ -81,12 +121,23 @@ const FavoritesManager: React.FC<FavoritesManagerProps> = ({ initialFavorites, o
 
   // 获取收藏的楼盘项目
   const favoriteProjects = useMemo(() => {
-    return favorites
+    console.log('计算favoriteProjects - 收藏数据:', favorites);
+    console.log('计算favoriteProjects - newHomeProjects数量:', newHomeProjects.length);
+    
+    const result = favorites
       .map((favorite) => {
         const project = newHomeProjects.find((p) => p.id === favorite.projectId);
-        return project ? { ...project, favoriteId: favorite.id, tags: favorite.tags, addedAt: favorite.addedAt } : null;
+        if (project) {
+          console.log('找到项目:', project.name, 'ID:', project.id);
+          return { ...project, favoriteId: favorite.id, tags: favorite.tags, addedAt: favorite.addedAt };
+        }
+        console.log('未找到项目:', favorite.projectId);
+        return null;
       })
       .filter((project): project is NewHomeProject & { favoriteId: string; tags: string[]; addedAt: string } => project !== null);
+    
+    console.log('计算favoriteProjects - 最终结果数量:', result.length);
+    return result;
   }, [favorites]);
 
   // 根据分类筛选项目
@@ -101,20 +152,24 @@ const FavoritesManager: React.FC<FavoritesManagerProps> = ({ initialFavorites, o
 
   // 处理删除收藏
   const handleRemoveFavorite = (favoriteId: string) => {
-    setFavorites((prev) => prev.filter((fav) => fav.id !== favoriteId));
+    const updatedFavorites = favorites.filter((fav) => fav.id !== favoriteId);
+    setFavorites(updatedFavorites);
     setCategories((prev) =>
       prev.map((category) => ({
         ...category,
         itemIds: category.itemIds.filter((id) => id !== favoriteId),
       }))
     );
+    
+    window.dispatchEvent(new CustomEvent('favoritesChanged', { detail: updatedFavorites }));
   };
 
   // 处理批量删除
   const handleBatchRemove = () => {
     if (selectedItems.length === 0) return;
     
-    setFavorites((prev) => prev.filter((fav) => !selectedItems.includes(fav.id)));
+    const updatedFavorites = favorites.filter((fav) => !selectedItems.includes(fav.id));
+    setFavorites(updatedFavorites);
     setCategories((prev) =>
       prev.map((category) => ({
         ...category,
@@ -123,6 +178,8 @@ const FavoritesManager: React.FC<FavoritesManagerProps> = ({ initialFavorites, o
     );
     setSelectedItems([]);
     setIsEditMode(false);
+    
+    window.dispatchEvent(new CustomEvent('favoritesChanged', { detail: updatedFavorites }));
   };
 
   // 处理添加到对比
@@ -168,7 +225,7 @@ const FavoritesManager: React.FC<FavoritesManagerProps> = ({ initialFavorites, o
     );
   };
 
-  // 处理全选/取消全选
+  // 处理全选
   const handleSelectAll = () => {
     if (selectedItems.length === filteredProjects.length) {
       setSelectedItems([]);
@@ -177,14 +234,13 @@ const FavoritesManager: React.FC<FavoritesManagerProps> = ({ initialFavorites, o
     }
   };
 
-  // 处理单个项目选择
-  const handleItemSelect = (favoriteId: string) => {
+  // 处理单项选择
+  const handleItemSelect = (itemId: string) => {
     setSelectedItems((prev) => {
-      if (prev.includes(favoriteId)) {
-        return prev.filter((id) => id !== favoriteId);
-      } else {
-        return [...prev, favoriteId];
+      if (prev.includes(itemId)) {
+        return prev.filter((id) => id !== itemId);
       }
+      return [...prev, itemId];
     });
   };
 

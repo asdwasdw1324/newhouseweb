@@ -3,7 +3,7 @@
  * 展示单个新房项目的详细信息
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NewHomeProject } from '../data/newHomes';
 import {
   ArrowLeft,
@@ -41,6 +41,34 @@ const NewHomeDetail: React.FC<NewHomeDetailProps> = ({
 }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showAllFeatures, setShowAllFeatures] = useState(false);
+  const [localIsFavorite, setLocalIsFavorite] = useState(isFavorite);
+
+  useEffect(() => {
+    setLocalIsFavorite(isFavorite);
+  }, [isFavorite]);
+
+  useEffect(() => {
+    const handleFavoritesChange = () => {
+      const storedFavorites = localStorage.getItem('favorites');
+      if (storedFavorites) {
+        try {
+          const favoritesData = JSON.parse(storedFavorites);
+          const favoriteIds = favoritesData.map((fav: any) => fav.projectId);
+          setLocalIsFavorite(favoriteIds.includes(project.id));
+        } catch (e) {
+          console.error('解析收藏数据失败:', e);
+        }
+      }
+    };
+
+    window.addEventListener('favoritesChanged', handleFavoritesChange);
+    window.addEventListener('storage', handleFavoritesChange);
+
+    return () => {
+      window.removeEventListener('favoritesChanged', handleFavoritesChange);
+      window.removeEventListener('storage', handleFavoritesChange);
+    };
+  }, [project.id]);
 
   const featureIcons: Record<string, React.ReactNode> = {
     '近地铁': <Car className="w-4 h-4" />,
@@ -82,12 +110,12 @@ const NewHomeDetail: React.FC<NewHomeDetailProps> = ({
                 <button
                   onClick={() => onFavorite(project)}
                   className={`p-2 rounded-full transition-colors ${
-                    isFavorite
+                    localIsFavorite
                       ? 'bg-orange-500 text-white'
                       : 'bg-white/10 text-gray-300 hover:bg-orange-500/30'
                   }`}
                 >
-                  <Heart className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
+                  <Heart className={`w-5 h-5 ${localIsFavorite ? 'fill-current' : ''}`} />
                 </button>
                 <button
                   onClick={() => onAddToComparison?.(project)}

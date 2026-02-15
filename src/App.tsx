@@ -1,8 +1,3 @@
-/**
- * 主应用组件
- * 整合所有页面和导航功能 - 传统页面切换方式
- */
-
 import React, { useState, useCallback, useEffect, Suspense, lazy, startTransition } from 'react';
 import './App.css';
 import './styles/globals.css';
@@ -39,6 +34,43 @@ function App() {
   const [comparisonList, setComparisonList] = useState<NewHomeProject[]>([]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all');
+  const [favoritesChanged, setFavoritesChanged] = useState(0);
+
+  // 从localStorage加载收藏的楼盘ID列表
+  useEffect(() => {
+    const storedFavorites = localStorage.getItem('favorites');
+    if (storedFavorites) {
+      try {
+        const favoritesData = JSON.parse(storedFavorites);
+        const favoriteIds = favoritesData.map((fav: any) => fav.projectId);
+        setFavorites(favoriteIds);
+        console.log('从localStorage加载收藏ID:', favoriteIds);
+      } catch (e) {
+        console.error('解析收藏数据失败:', e);
+        setFavorites([]);
+      }
+    }
+  }, []);
+
+  // 监听收藏变化，同步更新favorites列表
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const storedFavorites = localStorage.getItem('favorites');
+      if (storedFavorites) {
+        try {
+          const favoritesData = JSON.parse(storedFavorites);
+          const favoriteIds = favoritesData.map((fav: any) => fav.projectId);
+          setFavorites(favoriteIds);
+          console.log('storage事件更新收藏ID:', favoriteIds);
+        } catch (e) {
+          console.error('解析收藏数据失败:', e);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   // Preload featured chunk in idle time to reduce first-switch latency.
   useEffect(() => {
@@ -87,13 +119,57 @@ function App() {
 
   // 收藏处理
   const handleFavorite = useCallback((project: NewHomeProject) => {
-    setFavorites((prev) => {
-      if (prev.includes(project.id)) {
-        return prev.filter((id) => id !== project.id);
+    console.log('handleFavorite called:', project.name, 'ID:', project.id);
+    
+    try {
+      const storedFavorites = localStorage.getItem('favorites');
+      console.log('Stored favorites before:', storedFavorites);
+      
+      let favoritesData: any[] = [];
+      
+      if (storedFavorites) {
+        try {
+          favoritesData = JSON.parse(storedFavorites);
+          console.log('Parsed favorites data:', favoritesData);
+        } catch (e) {
+          console.error('解析收藏数据失败:', e);
+          favoritesData = [];
+        }
       }
-      return [...prev, project.id];
-    });
-  }, []);
+      
+      const existingIndex = favoritesData.findIndex((fav) => fav.projectId === project.id);
+      console.log('Existing index:', existingIndex);
+      
+      if (existingIndex >= 0) {
+        favoritesData.splice(existingIndex, 1);
+        console.log('Removed from favorites:', project.name);
+      } else {
+        favoritesData.push({
+          id: `fav-${Date.now()}`,
+          projectId: project.id,
+          addedAt: new Date().toISOString(),
+          tags: [],
+          notes: ''
+        });
+        console.log('Added to favorites:', project.name);
+      }
+      
+      localStorage.setItem('favorites', JSON.stringify(favoritesData));
+      console.log('Stored favorites after:', JSON.stringify(favoritesData));
+      
+      const updatedFavoriteIds = favoritesData.map((fav) => fav.projectId);
+      setFavorites(updatedFavoriteIds);
+      console.log('Updated favorite IDs:', updatedFavoriteIds);
+      
+      setFavoritesChanged(prev => prev + 1);
+      console.log('Favorites changed count:', favoritesChanged + 1);
+      
+      window.dispatchEvent(new CustomEvent('favoritesChanged', { detail: favoritesData }));
+      console.log('favoritesChanged event dispatched');
+    } catch (e) {
+      console.error('收藏操作失败:', e);
+    }
+  }, [favoritesChanged]);
 
   // 对比处理
   const handleAddToComparison = useCallback((project: NewHomeProject) => {
